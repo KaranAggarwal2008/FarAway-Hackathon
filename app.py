@@ -21,7 +21,6 @@ else:
     groq_client = None
 
 # Crisis keywords
-# Crisis keywords
 CRISIS_KEYWORDS = {
     "critical": [
         "suicide", "kill myself", "end my life", "want to die", "overdose", 
@@ -40,7 +39,7 @@ CRISIS_KEYWORDS = {
 def detect_crisis(text):
     text_lower = text.lower()
     
-    # Check medical emergencies first
+    # Check medical emergencies first (highest priority)
     for keyword in CRISIS_KEYWORDS["medical_emergency"]:
         if keyword in text_lower:
             return "MEDICAL_EMERGENCY"
@@ -168,9 +167,9 @@ if prompt := st.chat_input("Share your thoughts or feelings..."):
     emotion, emotion_score = analyze_emotion(prompt)
     crisis_level = detect_crisis(prompt)
     
-# Handle crisis
+    # Handle medical emergency
     if crisis_level == "MEDICAL_EMERGENCY":
-        medical_message = f"""🚨 **MEDICAL EMERGENCY - CALL 911 NOW!**
+        medical_message = """🚨 **MEDICAL EMERGENCY - CALL 911 NOW!**
 
 If you're having a heart attack, stroke, or other medical emergency:
 - **CALL 911 IMMEDIATELY**
@@ -179,13 +178,14 @@ If you're having a heart attack, stroke, or other medical emergency:
 
 This is a mental wellness app and CANNOT help with medical emergencies.
 
-**CALL 911 RIGHT NOW! ☎️**"""
+**CALL 911 RIGHT NOW!**"""
         
         st.session_state.messages.append({"role": "assistant", "content": medical_message})
         with st.chat_message("assistant"):
             st.error(medical_message)
         st.stop()
     
+    # Handle mental health crisis
     if crisis_level in ["CRITICAL", "ELEVATED"]:
         crisis_message = f"""🚨 **I'm genuinely concerned about your safety.**
 
@@ -197,6 +197,14 @@ Your life matters. Please reach out to a professional immediately. I'm here to s
         with st.chat_message("assistant"):
             st.error(crisis_message)
         st.stop()
+    
+    # Generate response
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            response = generate_response(prompt, emotion, emotion_score, crisis_level)
+            
+            # Add techniques
+            full_response = f"""{response}
 
 ---
 **💭 Detected Emotion:** {emotion.capitalize()} ({emotion_score:.0%} confidence)
