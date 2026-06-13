@@ -21,19 +21,38 @@ else:
     groq_client = None
 
 # Crisis keywords
+# Crisis keywords
 CRISIS_KEYWORDS = {
-    "critical": ["suicide", "kill myself", "end my life", "want to die", "overdose", "not worth living"],
-    "elevated": ["self harm", "hurt myself", "cutting", "worthless", "hopeless", "can't go on"]
+    "critical": [
+        "suicide", "kill myself", "end my life", "want to die", "overdose", 
+        "not worth living", "better off dead", "no reason to live"
+    ],
+    "elevated": [
+        "self harm", "hurt myself", "cutting", "worthless", "hopeless", 
+        "can't go on", "want to disappear"
+    ],
+    "medical_emergency": [
+        "heart attack", "chest pain", "can't breathe", "stroke", 
+        "seizure", "overdosed", "poisoned", "heavy bleeding"
+    ]
 }
 
 def detect_crisis(text):
     text_lower = text.lower()
+    
+    # Check medical emergencies first
+    for keyword in CRISIS_KEYWORDS["medical_emergency"]:
+        if keyword in text_lower:
+            return "MEDICAL_EMERGENCY"
+    
     for keyword in CRISIS_KEYWORDS["critical"]:
         if keyword in text_lower:
             return "CRITICAL"
+    
     for keyword in CRISIS_KEYWORDS["elevated"]:
         if keyword in text_lower:
             return "ELEVATED"
+    
     return "LOW"
 
 def analyze_emotion(text):
@@ -149,7 +168,24 @@ if prompt := st.chat_input("Share your thoughts or feelings..."):
     emotion, emotion_score = analyze_emotion(prompt)
     crisis_level = detect_crisis(prompt)
     
-    # Handle crisis
+# Handle crisis
+    if crisis_level == "MEDICAL_EMERGENCY":
+        medical_message = f"""🚨 **MEDICAL EMERGENCY - CALL 911 NOW!**
+
+If you're having a heart attack, stroke, or other medical emergency:
+- **CALL 911 IMMEDIATELY**
+- Do NOT wait
+- Do NOT drive yourself
+
+This is a mental wellness app and CANNOT help with medical emergencies.
+
+**CALL 911 RIGHT NOW! ☎️**"""
+        
+        st.session_state.messages.append({"role": "assistant", "content": medical_message})
+        with st.chat_message("assistant"):
+            st.error(medical_message)
+        st.stop()
+    
     if crisis_level in ["CRITICAL", "ELEVATED"]:
         crisis_message = f"""🚨 **I'm genuinely concerned about your safety.**
 
@@ -161,14 +197,6 @@ Your life matters. Please reach out to a professional immediately. I'm here to s
         with st.chat_message("assistant"):
             st.error(crisis_message)
         st.stop()
-    
-    # Generate response
-    with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            response = generate_response(prompt, emotion, emotion_score, crisis_level)
-            
-            # Add techniques
-            full_response = f"""{response}
 
 ---
 **💭 Detected Emotion:** {emotion.capitalize()} ({emotion_score:.0%} confidence)
